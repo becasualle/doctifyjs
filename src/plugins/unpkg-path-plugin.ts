@@ -12,27 +12,30 @@ export const unpkgPathPlugin = (inputCode: string) => {
     setup(build: esbuild.PluginBuild) {
       // определяет путь
       // первый раз вызываем с path указанный в entryPoints: ["index.js"]
+      build.onResolve({ filter: /(^index\.js$)/ }, () => {
+        return {
+          path: "index.js",
+          namespace: "a",
+        };
+      });
+      // если включает в себя вложенные файлы "./" "../"
+      build.onResolve({ filter: /^\.+\// }, (args: any) => {
+        return {
+          namespace: "a",
+          path: new URL(
+            `${args.path}`,
+            "https://unpkg.com" + args.resolveDir + "/"
+          ).href,
+        };
+      });
+      // Основной файл модуля
       build.onResolve({ filter: /.*/ }, async (args: any) => {
-        console.log("onResole", args);
-        if (args.path === "index.js") {
-          return { path: args.path, namespace: "a" };
-        }
-
-        if (args.path.includes("./") || args.path.includes("../")) {
-          return {
-            namespace: "a",
-            path: new URL(
-              `${args.path}`,
-              "https://unpkg.com" + args.resolveDir + "/"
-            ).href,
-          };
-        }
-
         return {
           namespace: "a",
           path: `https://unpkg.com/${args.path}`,
         };
       });
+
       // пытается загрузить контент файла по указанному пути
       build.onLoad({ filter: /.*/ }, async (args: any) => {
         console.log("onLoad", args);
